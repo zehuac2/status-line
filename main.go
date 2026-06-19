@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,6 +37,10 @@ type Cost struct {
 	TotalLinesRemoved int     `json:"total_lines_removed"`
 }
 
+// sampleInput is a representative payload used when the -claude flag is set,
+// so the status line can be previewed without piping JSON by hand.
+const sampleInput = `{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/Users/zehuachen/Developer/others/status-line"},"cost":{"total_cost_usd":0.0123,"total_lines_added":156,"total_lines_removed":23}}`
+
 // gitBranch returns the current git branch for the given directory,
 // or an empty string if the directory is not inside a git repo.
 func gitBranch(dir string) string {
@@ -45,15 +51,11 @@ func gitBranch(dir string) string {
 	return strings.TrimSpace(string(out))
 }
 
-func main() {
-	var in StatusInput
-	if err := json.NewDecoder(os.Stdin).Decode(&in); err != nil {
-		// Never crash Claude Code's UI — emit a safe fallback line.
-		fmt.Println("status-line: failed to read input")
-		return
-	}
-
-	// Styles — use fmt.Println with style.Render, NOT lipgloss writer funcs,
+// render builds the styled status line string from a decoded StatusInput.
+// All segment and styling logic lives here so it is shared between the real
+// (stdin) path and the -claude sample path.
+func render(in StatusInput) string {
+	// Styles — use style.Render with fmt, NOT lipgloss writer funcs,
 	// because lipgloss writers strip ANSI when stdout is not a TTY (piped).
 	styleModel   := lipgloss.NewStyle().Foreground(lipgloss.Color("5")).Bold(true)
 	styleDir     := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
@@ -85,12 +87,33 @@ func main() {
 	}
 
 	// Segment 4 — cost + lines added / removed.
-	costStr   := fmt.Sprintf("$%.4f", in.Cost.TotalCostUSD)
-	addedStr  := fmt.Sprintf("+%d", in.Cost.TotalLinesAdded)
+	costStr    := fmt.Sprintf("$%.4f", in.Cost.TotalCostUSD)
+	addedStr   := fmt.Sprintf("+%d", in.Cost.TotalLinesAdded)
 	removedStr := fmt.Sprintf("-%d", in.Cost.TotalLinesRemoved)
 	costSegment := styleCost.Render(costStr) + " " +
 		styleAdded.Render(addedStr) + styleSep.Render("/") + styleRemoved.Render(removedStr)
 	parts = append(parts, costSegment)
 
-	fmt.Println(strings.Join(parts, sep))
+	return strings.Join(parts, sep)
+}
+
+func main() {
+	claude := flag.Bool("claude", false, "render the status line from built-in sample JSON instead of stdin")
+	flag.Parse()
+
+	var r io.Reader
+	if *claude {
+		r = strings.NewReader(sampleInput)
+	} else {
+		r = os.Stdin
+	}
+
+	var in StatusInput
+	if err := json.NewDecoder(r).Decode(&in); err != nil {
+		// Never crash Claude Code's UI — emit a safe fallback line.
+		fmt.Println("status-line: failed to read input")
+		return
+	}
+
+	fmt.Println(render(in))
 }
