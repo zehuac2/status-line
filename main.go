@@ -90,12 +90,12 @@ func rateStyle(remaining int) lipgloss.Style {
 }
 
 func render(in StatusInput) string {
-	cyan     := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	cyan := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
 	boldBlue := lipgloss.NewStyle().Foreground(lipgloss.Color("4")).Bold(true)
-	red      := lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
-	yellow   := lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
-	magenta  := lipgloss.NewStyle().Foreground(lipgloss.Color("5"))
-	green    := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	red := lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
+	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
+	magenta := lipgloss.NewStyle().Foreground(lipgloss.Color("5"))
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
 
 	dir := filepath.Base(in.Cwd)
 	if dir == "" || dir == "." {
