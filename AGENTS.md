@@ -32,11 +32,14 @@ All numeric fields are pointers (`*float64` / `*int64`) and are omitted from out
 
 ## Key files
 
-| File       | Purpose                                                                         |
-| ---------- | ------------------------------------------------------------------------------- |
-| `main.go`  | All logic: types, `render()`, `getGitStatus()`, `main()`                        |
-| `build.go` | Cross-compile script (`go run build.go`); tagged `//go:build ignore`            |
-| `go.mod`   | Module `github.com/zehuac2/status-line`, Go 1.26, uses `charm.land/lipgloss/v2` |
+| File         | Purpose                                                                         |
+| ------------ | ------------------------------------------------------------------------------- |
+| `main.go`    | Entrypoint: parses flags, reads stdin or sample JSON, calls `render()`          |
+| `types.go`   | All input types (`StatusInput`, `Model`, etc.) and `sampleInput` const          |
+| `git.go`     | `gitStatus` struct and `getGitStatus()` function                                |
+| `render.go`  | `rateStyle()` helper and `render()` function                                    |
+| `build.go`   | Cross-compile script (`go run build.go`); tagged `//go:build ignore`            |
+| `go.mod`     | Module `github.com/zehuac2/status-line`, Go 1.26, uses `charm.land/lipgloss/v2` |
 
 ## Development
 
