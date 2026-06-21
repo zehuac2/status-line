@@ -47,6 +47,8 @@ go run build.go
 go build -o status-line .
 ```
 
+- Always format code with `go fmt`
+
 ## Color conventions (lipgloss ANSI 256)
 
 | Color | Code | Used for |
