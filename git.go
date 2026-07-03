@@ -5,33 +5,24 @@ import (
 	"strings"
 )
 
-type gitStatus struct {
-	branch string
-	dirty  bool
-}
-
-func getGitStatus(dir string) (gitStatus, bool) {
+func getGitBranch(dir string) (string, bool) {
 	if err := exec.Command("git", "-C", dir, "rev-parse", "--git-dir").Run(); err != nil {
-		return gitStatus{}, false
+		return "", false
 	}
 
-	var branch string
 	out, err := exec.Command("git", "-C", dir, "symbolic-ref", "--short", "HEAD").Output()
 	if err == nil {
-		branch = strings.TrimSpace(string(out))
-	} else {
-		out, err = exec.Command("git", "-C", dir, "rev-parse", "--short", "HEAD").Output()
-		if err == nil {
-			branch = strings.TrimSpace(string(out))
+		if branch := strings.TrimSpace(string(out)); branch != "" {
+			return branch, true
 		}
 	}
 
-	if branch == "" {
-		return gitStatus{}, false
+	out, err = exec.Command("git", "-C", dir, "rev-parse", "--short", "HEAD").Output()
+	if err == nil {
+		if branch := strings.TrimSpace(string(out)); branch != "" {
+			return branch, true
+		}
 	}
 
-	out, _ = exec.Command("git", "-C", dir, "status", "--porcelain").Output()
-	dirty := strings.TrimSpace(string(out)) != ""
-
-	return gitStatus{branch: branch, dirty: dirty}, true
+	return "", false
 }
