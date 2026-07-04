@@ -25,5 +25,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ github.event.release.tag_name }}" \
-            dist/status-line-darwin-arm64 \
-            dist/status-line-linux-amd64
+            dist/status-line-*.tar.gz \
+            dist/status-line-*.zip \
+            dist/SHA256SUMS.txt
