@@ -6,13 +6,15 @@ A Go CLI binary that renders a three-line styled terminal status bar for Claude 
 
 Reads a JSON blob from stdin, parses it, and prints a lipgloss-styled status line to stdout. Claude Code pipes a JSON payload to this binary on each turn; the output becomes the status line shown below the prompt.
 
+The three lines are framed by a corner-bracket box (`box()` in render.go) — just the four rounded corners (`╭ ╮ ╰ ╯`), no connecting edges.
+
 **Line 1:** `<cwd-basename> git:(<branch>) ✦ <ModelName> ctx <bar>`
 **Line 2:** `▲<lines-added> ▼<lines-removed> ⧗ <session-duration>`
 **Line 3:** `$<cost> 5h <bar> 7d <bar> ↺ <rate-limit-reset-time>`
 
 `<bar>` is a 10-character block gauge (`bar()` in render.go) built from a percentage — full `█` blocks, one faint `█` remainder cell (rounded to the nearest eighth of a cell), `░` padding. The remainder cell is a dimmed solid block rather than a fractional glyph (▏▎▍▌▋▊▉), since those render inconsistently across monospace fonts.
 
-Any segment whose backing field is absent is omitted, and a whole line collapses (not printed as blank) if every one of its segments is absent.
+Any segment whose backing field is absent is omitted, and a whole line collapses (not printed as blank) if every one of its segments is absent. If all three lines collapse, the box itself is omitted too — no empty frame is printed.
 
 ## Input schema
 
@@ -47,7 +49,7 @@ All numeric fields are pointers (`*float64` / `*int64`) and are omitted from out
 | `main.go`    | Entrypoint: parses flags, reads stdin or sample JSON, calls `render()`          |
 | `types.go`   | All input types (`StatusInput`, `Model`, etc.) and `sampleInput` const          |
 | `git.go`     | `getGitBranch()` function                                                       |
-| `render.go`  | `bar()`, `rateStyle()`, `row()` helpers and `render()` function                 |
+| `render.go`  | `bar()`, `row()`, `box()` helpers and `render()` function                       |
 | `build.go`   | Cross-compile + package script (`go run build.go`); tagged `//go:build ignore`  |
 | `go.mod`     | Module `github.com/zehuac2/status-line`, Go 1.26, uses `charm.land/lipgloss/v2` |
 
@@ -70,28 +72,24 @@ go build -o status-line .
 
 - Always format code with `go fmt`
 
-## Color conventions (lipgloss ANSI 256)
+## Color conventions (lipgloss truecolor)
 
-Every segment renders bold, matching the design's block-wide `font-weight:700`.
+Most segments render bold, matching the design's block-wide `font-weight:700`; the cwd basename and `ctx <bar>` segment are normal weight (the design overrides those to `400`).
 
-| Color   | Code  | Used for                                             |
-| ------- | ----- | ----------------------------------------------------- |
-| cyan    | `"6"` | cwd basename                                           |
-| blue    | `"4"` | `git:(…)` brackets                                     |
-| red     | `"1"` | branch name, `▼` lines removed, rate-limit ≤20% remaining |
-| yellow  | `"3"` | rate-limit 20–49% remaining                            |
-| magenta | `"5"` | ctx bar                                                |
-| green   | `"2"` | model name, `▲` lines added, cost, rate-limit ≥50% remaining |
-| gray    | `"8"` | session duration, rate-limit reset time                |
+| Color        | Hex       | Used for                                                                        |
+| ------------ | --------- | -------------------------------------------------------------------------------- |
+| warm gray    | `#8f8a80` | cwd basename, `git:(…)` brackets, `✦`, `ctx <bar>`, `▲added ▼removed`, `$cost`, `↺`, box corners |
+| dim gray     | `#6f6b62` | session duration, whole `7d <bar>` segment                                        |
+| Claude coral | `#d97757` | branch name, model name, whole `5h <bar>` segment, reset time                    |
 
-The 5h/7d bars are colored by `rateStyle()`, keyed off *remaining* percentage (100 − used), not a fixed color — the whole `5h <bar>` / `7d <bar>` segment takes the severity color.
+`5h` and `7d` are fixed colors (coral / dim gray) rather than keyed off remaining rate-limit percentage — there's no severity coloring.
 
 ## Architecture notes
 
 - Single-package binary; no sub-packages.
 - `render()` is pure (no side effects) — unit-testable without file I/O.
 - `getGitBranch()` shells out to `git`; it gracefully returns `false` when the cwd is not a repo. It only resolves a branch (or short SHA for detached HEAD) — no dirty-tree check, since the design has no dirty indicator.
-- Segments within a line are assembled with `lipgloss.JoinHorizontal` (`row()` wraps it, skipping empty segments); the three lines are plain `strings.Join`ed with `"\n"` rather than `lipgloss.JoinVertical`, since that would pad shorter lines with trailing spaces to match the widest one.
+- Segments within a line are assembled with `lipgloss.JoinHorizontal` (`row()` wraps it, skipping empty segments); the three lines are then framed by `box()`, which left-pads each line and joins everything (including the corner-bracket top/bottom rows) with plain `strings.Join` rather than `lipgloss.JoinVertical`, since that would pad shorter lines with trailing spaces to match the widest one.
 - The `-claude` flag is a preview mode that feeds `sampleInput` instead of stdin — useful for iterating on styling without a live Claude session.
 
 ## Releases

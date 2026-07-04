@@ -10,17 +10,6 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-func rateStyle(remaining int) lipgloss.Style {
-	switch {
-	case remaining >= 50:
-		return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("2"))
-	case remaining >= 20:
-		return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("3"))
-	default:
-		return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("1"))
-	}
-}
-
 // bar renders pct (0-100) as a length-cell block gauge in the given style.
 // A cell that's only partially filled renders as a solid block in a faint
 // variant of style rather than a fractional glyph — the eighth-block runes
@@ -81,13 +70,48 @@ func row(segments ...string) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
 }
 
+// box frames non-empty lines with corner brackets only (no connecting edges),
+// left-padded to line up under the top-left corner.
+func box(lines []string) string {
+	var present []string
+	for _, l := range lines {
+		if l != "" {
+			present = append(present, l)
+		}
+	}
+	if len(present) == 0 {
+		return ""
+	}
+
+	corner := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#8f8a80"))
+
+	width := 0
+	for _, l := range present {
+		if w := lipgloss.Width(l); w > width {
+			width = w
+		}
+	}
+	const leftPad, rightPad = 2, 2
+	total := leftPad + width + rightPad
+
+	top := corner.Render("╭") + strings.Repeat(" ", total-2) + corner.Render("╮")
+	bottom := corner.Render("╰") + strings.Repeat(" ", total-2) + corner.Render("╯")
+
+	out := make([]string, 0, len(present)+2)
+	out = append(out, top)
+	for _, l := range present {
+		out = append(out, strings.Repeat(" ", leftPad)+l)
+	}
+	out = append(out, bottom)
+
+	return strings.Join(out, "\n")
+}
+
 func render(in StatusInput) string {
-	cyan := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
-	blue := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4"))
-	red := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("1"))
-	green := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("2"))
-	magenta := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("5"))
-	gray := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("8"))
+	accent := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#d97757"))
+	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#8f8a80"))
+	labelNorm := lipgloss.NewStyle().Foreground(lipgloss.Color("#8f8a80"))
+	dim := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#6f6b62"))
 
 	dir := filepath.Base(in.Cwd)
 	if dir == "" || dir == "." {
@@ -96,19 +120,19 @@ func render(in StatusInput) string {
 
 	var gitSeg, modelSeg, ctxSeg string
 
-	gitSeg = cyan.Render(dir)
 	if in.Cwd != "" {
+		gitSeg = labelNorm.Render(dir)
 		if branch, ok := getGitBranch(in.Cwd); ok {
-			gitSeg = row(gitSeg, blue.Render("git:(")+red.Render(branch)+blue.Render(")"))
+			gitSeg = row(gitSeg, label.Render("git:(")+accent.Render(branch)+label.Render(")"))
 		}
 	}
 
 	if name := in.Model.DisplayName; name != "" {
-		modelSeg = green.Render("✦ " + name)
+		modelSeg = label.Render("✦ ") + accent.Render(name)
 	}
 
 	if p := in.ContextWindow.UsedPercentage; p != nil {
-		ctxSeg = magenta.Render("ctx ") + bar(*p, 10, magenta)
+		ctxSeg = labelNorm.Render("ctx ") + bar(*p, 10, labelNorm)
 	}
 
 	line1 := row(gitSeg, modelSeg, ctxSeg)
@@ -116,17 +140,14 @@ func render(in StatusInput) string {
 	var diffSeg, sessionSeg string
 
 	if in.Cost.TotalLinesAdded != nil && in.Cost.TotalLinesRemoved != nil {
-		diffSeg = row(
-			green.Render(fmt.Sprintf("▲%d", *in.Cost.TotalLinesAdded)),
-			red.Render(fmt.Sprintf("▼%d", *in.Cost.TotalLinesRemoved)),
-		)
+		diffSeg = label.Render(fmt.Sprintf("▲%d ▼%d", *in.Cost.TotalLinesAdded, *in.Cost.TotalLinesRemoved))
 	}
 
 	if in.Cost.TotalDurationMs != nil {
 		d := time.Duration(*in.Cost.TotalDurationMs) * time.Millisecond
 		h := int(d.Hours())
 		m := int(d.Minutes()) % 60
-		sessionSeg = gray.Render(fmt.Sprintf("⧗ %dh%02dm", h, m))
+		sessionSeg = dim.Render(fmt.Sprintf("⧗ %dh%02dm", h, m))
 	}
 
 	line2 := row(diffSeg, sessionSeg)
@@ -134,19 +155,15 @@ func render(in StatusInput) string {
 	var costSeg, fiveHrSeg, sevenDSeg, resetSeg string
 
 	if in.Cost.TotalCostUSD != nil {
-		costSeg = green.Render(fmt.Sprintf("$%.2f", *in.Cost.TotalCostUSD))
+		costSeg = label.Render(fmt.Sprintf("$%.2f", *in.Cost.TotalCostUSD))
 	}
 
 	if p := in.RateLimits.FiveHour.UsedPercentage; p != nil {
-		rem := int(math.Round(100 - *p))
-		style := rateStyle(rem)
-		fiveHrSeg = style.Render("5h ") + bar(*p, 10, style)
+		fiveHrSeg = accent.Render("5h ") + bar(*p, 10, accent)
 	}
 
 	if p := in.RateLimits.SevenDay.UsedPercentage; p != nil {
-		rem := int(math.Round(100 - *p))
-		style := rateStyle(rem)
-		sevenDSeg = style.Render("7d ") + bar(*p, 10, style)
+		sevenDSeg = dim.Render("7d ") + bar(*p, 10, dim)
 	}
 
 	resetsAt := in.RateLimits.FiveHour.ResetsAt
@@ -154,17 +171,10 @@ func render(in StatusInput) string {
 		resetsAt = in.RateLimits.SevenDay.ResetsAt
 	}
 	if resetsAt != nil {
-		resetSeg = gray.Render("↺ " + time.Unix(*resetsAt, 0).Format("3:04pm"))
+		resetSeg = label.Render("↺ ") + accent.Render(time.Unix(*resetsAt, 0).Format("3:04pm"))
 	}
 
 	line3 := row(costSeg, fiveHrSeg, sevenDSeg, resetSeg)
 
-	var lines []string
-	for _, l := range []string{line1, line2, line3} {
-		if l != "" {
-			lines = append(lines, l)
-		}
-	}
-
-	return strings.Join(lines, "\n")
+	return box([]string{line1, line2, line3})
 }
