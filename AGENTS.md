@@ -48,7 +48,7 @@ All numeric fields are pointers (`*float64` / `*int64`) and are omitted from out
 | `types.go`   | All input types (`StatusInput`, `Model`, etc.) and `sampleInput` const          |
 | `git.go`     | `getGitBranch()` function                                                       |
 | `render.go`  | `bar()`, `rateStyle()`, `row()` helpers and `render()` function                 |
-| `build.go`   | Cross-compile script (`go run build.go`); tagged `//go:build ignore`            |
+| `build.go`   | Cross-compile + package script (`go run build.go`); tagged `//go:build ignore`  |
 | `go.mod`     | Module `github.com/zehuac2/status-line`, Go 1.26, uses `charm.land/lipgloss/v2` |
 
 ## Development
@@ -60,7 +60,8 @@ go run . -claude
 # Run with real JSON
 echo '{"model":{"display_name":"Opus"},...}' | go run .
 
-# Cross-compile for darwin-arm64 and linux-amd64 → dist/
+# Cross-compile + package for darwin-arm64, linux-amd64, linux-arm64,
+# windows-amd64, windows-arm64 → dist/*.tar.gz / dist/*.zip + dist/SHA256SUMS.txt
 go run build.go
 
 # Build locally
@@ -92,3 +93,13 @@ The 5h/7d bars are colored by `rateStyle()`, keyed off *remaining* percentage (1
 - `getGitBranch()` shells out to `git`; it gracefully returns `false` when the cwd is not a repo. It only resolves a branch (or short SHA for detached HEAD) — no dirty-tree check, since the design has no dirty indicator.
 - Segments within a line are assembled with `lipgloss.JoinHorizontal` (`row()` wraps it, skipping empty segments); the three lines are plain `strings.Join`ed with `"\n"` rather than `lipgloss.JoinVertical`, since that would pad shorter lines with trailing spaces to match the widest one.
 - The `-claude` flag is a preview mode that feeds `sampleInput` instead of stdin — useful for iterating on styling without a live Claude session.
+
+## Releases
+
+`build.go` packages each target as an archive (`.tar.gz` on darwin/linux, `.zip` on
+windows) containing a single binary named `status-line` (`status-line.exe` on windows),
+plus a `dist/SHA256SUMS.txt` covering all archives. This naming/format is deliberate so the
+GitHub release assets are installable via [mise's `github:` backend](https://mise.jdx.dev/dev-tools/backends/github.html)
+(`mise use github:zehuac2/status-line`), which autodetects platform from OS/arch tokens in
+the filename and scores archive formats over bare binaries. `.github/workflows/release.yml`
+uploads everything `build.go` emits on `release: published`.
