@@ -30,11 +30,12 @@ type target struct {
 	kind   archiveKind
 }
 
+// amd64 is not recognized by mise at least on Linux.
 var targets = []target{
 	{"darwin", "arm64", "darwin-arm64", archiveTarGz},
-	{"linux", "amd64", "linux-amd64", archiveTarGz},
+	{"linux", "amd64", "linux-x64", archiveTarGz},
 	{"linux", "arm64", "linux-arm64", archiveTarGz},
-	{"windows", "amd64", "windows-amd64", archiveZip},
+	{"windows", "amd64", "windows-x64", archiveZip},
 	{"windows", "arm64", "windows-arm64", archiveZip},
 }
 

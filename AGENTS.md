@@ -77,8 +77,8 @@ go run . -claude
 # Run with real JSON
 echo '{"model":{"display_name":"Opus"},...}' | go run .
 
-# Cross-compile + package for darwin-arm64, linux-amd64, linux-arm64,
-# windows-amd64, windows-arm64 → dist/*.tar.gz / dist/*.zip + dist/SHA256SUMS.txt
+# Cross-compile + package for darwin-arm64, linux-x64, linux-arm64,
+# windows-x64, windows-arm64 → dist/*.tar.gz / dist/*.zip + dist/SHA256SUMS.txt
 go run build.go
 
 # Build locally
