@@ -73,38 +73,27 @@ func row(segments ...string) string {
 // box frames non-empty lines with corner brackets only (no connecting edges),
 // left-padded to line up under the top-left corner.
 func box(lines []string) string {
-	var present []string
-	for _, l := range lines {
-		if l != "" {
-			present = append(present, l)
-		}
+	border := lipgloss.Border{
+		TopLeft:     "╭",
+		TopRight:    "╮",
+		BottomLeft:  "╰",
+		BottomRight: "╯",
+		// U+2800 (blank braille pattern) renders as a blank cell but, unlike
+		// a literal space, isn't whitespace — Claude Code's status line
+		// strips leading whitespace per line, which collapses a real " "
+		// left border and misaligns content under the top-left corner.
+		Left:   "\u2800",
+		Top:    "\u2800",
+		Right:  "\u2800",
+		Bottom: "\u2800",
 	}
-	if len(present) == 0 {
-		return ""
-	}
 
-	corner := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#8f8a80"))
+	borderStyle := lipgloss.NewStyle().
+		Border(border).
+		PaddingLeft(1).
+		PaddingRight(1)
 
-	width := 0
-	for _, l := range present {
-		if w := lipgloss.Width(l); w > width {
-			width = w
-		}
-	}
-	const leftPad, rightPad = 2, 2
-	total := leftPad + width + rightPad
-
-	top := corner.Render("╭") + strings.Repeat(" ", total-2) + corner.Render("╮")
-	bottom := corner.Render("╰") + strings.Repeat(" ", total-2) + corner.Render("╯")
-
-	out := make([]string, 0, len(present)+2)
-	out = append(out, top)
-	for _, l := range present {
-		out = append(out, strings.Repeat(" ", leftPad)+l)
-	}
-	out = append(out, bottom)
-
-	return strings.Join(out, "\n")
+	return borderStyle.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
 }
 
 func render(in StatusInput) string {
