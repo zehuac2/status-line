@@ -5,6 +5,16 @@ import "charm.land/lipgloss/v2"
 // box frames non-empty lines with corner brackets only (no connecting edges),
 // left-padded to line up under the top-left corner.
 func Box(lines ...string) string {
+	var present []string
+	for _, l := range lines {
+		if l != "" {
+			present = append(present, l)
+		}
+	}
+	if len(present) == 0 {
+		return ""
+	}
+
 	border := lipgloss.Border{
 		TopLeft:     "╭",
 		TopRight:    "╮",
@@ -25,5 +35,5 @@ func Box(lines ...string) string {
 		PaddingLeft(1).
 		PaddingRight(1)
 
-	return borderStyle.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
+	return borderStyle.Render(lipgloss.JoinVertical(lipgloss.Left, present...))
 }
