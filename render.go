@@ -10,23 +10,13 @@ import (
 	"github.com/zehuac2/status-line/components"
 )
 
-// vimModeColors maps vim.mode values to their accent color; unrecognized
-// modes fall back to the coral accent used for NORMAL.
-var vimModeColors = map[string]string{
-	"NORMAL":      "#d97757",
-	"INSERT":      "#69c27e",
-	"VISUAL":      "#9792ec",
-	"VISUAL LINE": "#9792ec",
-	"REPLACE":     "#e36b65",
-}
-
-func render(in StatusInput) string {
-	accent := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#d97757"))
-	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#8f8a80"))
-	labelNorm := lipgloss.NewStyle().Foreground(lipgloss.Color("#8f8a80"))
-	dim := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#6f6b62"))
-	dimNorm := lipgloss.NewStyle().Foreground(lipgloss.Color("#6f6b62"))
-	divider := lipgloss.NewStyle().Foreground(lipgloss.Color("#2a2a2a"))
+func render(in StatusInput, t *theme) string {
+	accent := lipgloss.NewStyle().Bold(true).Foreground(t.Coral)
+	label := lipgloss.NewStyle().Bold(true).Foreground(t.WarmGray)
+	labelNorm := lipgloss.NewStyle().Foreground(t.WarmGray)
+	dim := lipgloss.NewStyle().Bold(true).Foreground(t.DimGray)
+	dimNorm := lipgloss.NewStyle().Foreground(t.DimGray)
+	divider := lipgloss.NewStyle().Foreground(t.Divider)
 
 	dir := filepath.Base(in.Cwd)
 	if dir == "" || dir == "." {
@@ -93,11 +83,7 @@ func render(in StatusInput) string {
 
 	var modeRow, dividerRow string
 	if mode := in.Vim.Mode; mode != "" {
-		hex, ok := vimModeColors[mode]
-		if !ok {
-			hex = vimModeColors["NORMAL"]
-		}
-		modeColor := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(hex))
+		modeColor := lipgloss.NewStyle().Bold(true).Foreground(t.Vim.color(mode))
 		modeRow = components.Row(dimNorm.Render("mode"), modeColor.Render(mode))
 
 		w := lipgloss.Width(modeRow)
