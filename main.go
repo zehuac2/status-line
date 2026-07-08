@@ -26,5 +26,6 @@ func main() {
 		return
 	}
 
-	fmt.Println(render(in))
+	t := claudeTheme()
+	fmt.Println(render(in, t))
 }
