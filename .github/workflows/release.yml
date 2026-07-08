@@ -46,6 +46,8 @@ jobs:
               (a, b) => new Date(b.created_at) - new Date(a.created_at),
             );
 
+            // Keep the last 2 releases so installers don't throw errors if the
+            // the latest release is too new.
             const keepTags = new Set([
               currentTag,
               ...sorted.map((r) => r.tag_name).filter((t) => t !== currentTag).slice(0, 2),
