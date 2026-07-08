@@ -1,5 +1,7 @@
 package main
 
+import "image/color"
+
 type StatusInput struct {
 	Model         Model         `json:"model"`
 	Cwd           string        `json:"cwd"`
@@ -16,6 +18,23 @@ type Model struct {
 // Vim is absent from the input entirely when vim mode is disabled.
 type Vim struct {
 	Mode string `json:"mode"`
+}
+
+// color resolves v.Mode to its accent in t, falling back to Normal (coral)
+// for NORMAL and any unrecognized mode.
+func (v Vim) color(t *vimTheme) color.Color {
+	switch v.Mode {
+	case "INSERT":
+		return t.Insert
+	case "VISUAL":
+		return t.Visual
+	case "VISUAL LINE":
+		return t.VisualLine
+	case "REPLACE":
+		return t.Replace
+	default:
+		return t.Normal
+	}
 }
 
 type ContextWindow struct {

@@ -26,23 +26,6 @@ type vimTheme struct {
 	Replace    color.Color
 }
 
-// color resolves a vim.mode string to its accent, falling back to Normal
-// (coral) for NORMAL and any unrecognized mode.
-func (v vimTheme) color(mode string) color.Color {
-	switch mode {
-	case "INSERT":
-		return v.Insert
-	case "VISUAL":
-		return v.Visual
-	case "VISUAL LINE":
-		return v.VisualLine
-	case "REPLACE":
-		return v.Replace
-	default:
-		return v.Normal
-	}
-}
-
 func claudeTheme() *theme {
 	return &theme{
 		WarmGray: lipgloss.Color("#8f8a80"),

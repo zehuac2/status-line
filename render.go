@@ -83,7 +83,7 @@ func render(in StatusInput, t *theme) string {
 
 	var modeRow, dividerRow string
 	if mode := in.Vim.Mode; mode != "" {
-		modeColor := lipgloss.NewStyle().Bold(true).Foreground(t.Vim.color(mode))
+		modeColor := lipgloss.NewStyle().Bold(true).Foreground(in.Vim.color(&t.Vim))
 		modeRow = components.Row(dimGrayNormal.Render("mode"), modeColor.Render(mode))
 
 		w := lipgloss.Width(modeRow)
