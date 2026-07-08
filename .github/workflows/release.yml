@@ -28,3 +28,16 @@ jobs:
             dist/status-line-*.tar.gz \
             dist/status-line-*.zip \
             dist/SHA256SUMS.txt
+
+      - name: Delete assets from prior releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current_tag="${{ github.event.release.tag_name }}"
+          for tag in $(gh release list --limit 100 --json tagName -q '.[].tagName'); do
+            if [ "$tag" != "$current_tag" ]; then
+              for asset in $(gh release view "$tag" --json assets -q '.assets[].name'); do
+                gh release delete-asset "$tag" "$asset" --yes
+              done
+            fi
+          done
