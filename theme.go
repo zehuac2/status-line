@@ -11,7 +11,7 @@ import (
 type theme struct {
 	WarmGray color.Color // cwd basename, git brackets, ✦, ctx bar, ▲▼, $cost, ↺
 	DimGray  color.Color // session duration, 7d bar, mode label
-	Coral    color.Color // branch, model, 5h bar, reset time
+	Primary  color.Color // branch, model, 5h bar, reset time
 	Divider  color.Color // ─ rule under the mode row
 
 	Vim vimTheme // per-mode vim accents
@@ -47,7 +47,7 @@ func claudeTheme() *theme {
 	return &theme{
 		WarmGray: lipgloss.Color("#8f8a80"),
 		DimGray:  lipgloss.Color("#6f6b62"),
-		Coral:    lipgloss.Color("#d97757"),
+		Primary:  lipgloss.Color("#d97757"),
 		Divider:  lipgloss.Color("#2a2a2a"),
 		Vim: vimTheme{
 			Normal:     lipgloss.Color("#d97757"),
