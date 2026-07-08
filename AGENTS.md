@@ -65,17 +65,18 @@ binary's own mode row.
 
 ## Key files
 
-| File                | Purpose                                                                         |
-| ------------------- | ------------------------------------------------------------------------------- |
-| `main.go`           | Entrypoint: parses flags, reads stdin or sample JSON, calls `render()`          |
-| `types.go`          | All input types (`StatusInput`, `Model`, etc.) and `sampleInput` const          |
-| `git.go`            | `getGitBranch()` function                                                       |
-| `render.go`         | `render()` function, assembling segments and calling into `components`          |
-| `components/bar.go` | `components.Bar()` block-gauge helper                                           |
-| `components/row.go` | `components.Row()` segment-joining helper                                       |
-| `components/box.go` | `components.Box()` corner-bracket framing helper                                |
-| `build.go`          | Cross-compile + package script (`go run build.go`); tagged `//go:build ignore`  |
-| `go.mod`            | Module `github.com/zehuac2/status-line`, Go 1.26, uses `charm.land/lipgloss/v2` |
+| File                | Purpose                                                                                      |
+| ------------------- | -------------------------------------------------------------------------------------------- |
+| `main.go`           | Entrypoint: parses flags, reads stdin or sample JSON, builds the theme, calls `render()`     |
+| `types.go`          | All input types (`StatusInput`, `Model`, etc.) and `sampleInput` const                       |
+| `git.go`            | `getGitBranch()` function                                                                    |
+| `render.go`         | `render(in StatusInput, t *theme) string`, assembling segments and calling into `components` |
+| `theme.go`          | `theme`/`vimTheme` structs and `claudeTheme()` constructor centralizing every color          |
+| `components/bar.go` | `components.Bar()` block-gauge helper                                                        |
+| `components/row.go` | `components.Row()` segment-joining helper                                                    |
+| `components/box.go` | `components.Box()` corner-bracket framing helper                                             |
+| `build.go`          | Cross-compile + package script (`go run build.go`); tagged `//go:build ignore`               |
+| `go.mod`            | Module `github.com/zehuac2/status-line`, Go 1.26, uses `charm.land/lipgloss/v2`              |
 
 ## Development
 
@@ -99,16 +100,23 @@ go build -o status-line .
 
 ## Color conventions (lipgloss truecolor)
 
+Colors are centralized in the `theme` struct (`theme.go`), constructed by
+`claudeTheme()` and passed into `render()` — not hardcoded `lipgloss.Color`
+literals scattered through `render.go`.
+
 Most segments render bold, matching the design's block-wide `font-weight:700`;
 the cwd basename and `ctx <bar>` segment are normal weight (the design overrides
 those to `400`).
 
-| Color        | Hex       | Used for                                                                                         |
-| ------------ | --------- | ------------------------------------------------------------------------------------------------ |
-| warm gray    | `#8f8a80` | cwd basename, `git:(…)` brackets, `✦`, `ctx <bar>`, `▲added ▼removed`, `$cost`, `↺`, box corners |
-| dim gray     | `#6f6b62` | session duration, whole `7d <bar>` segment, `mode` label (normal weight)                         |
-| Claude coral | `#d97757` | branch name, model name, whole `5h <bar>` segment, reset time, `NORMAL` vim mode                 |
-| divider gray | `#2a2a2a` | the `─` rule between the mode row and line 1                                                     |
+| Color        | Hex       | Theme field | Used for                                                                            |
+| ------------ | --------- | ----------- | ----------------------------------------------------------------------------------- |
+| warm gray    | `#8f8a80` | `WarmGray`  | cwd basename, `git:(…)` brackets, `✦`, `ctx <bar>`, `▲added ▼removed`, `$cost`, `↺` |
+| dim gray     | `#6f6b62` | `DimGray`   | session duration, whole `7d <bar>` segment, `mode` label (normal weight)            |
+| Claude coral | `#d97757` | `Primary`   | branch name, model name, whole `5h <bar>` segment, reset time, `NORMAL` vim mode    |
+| divider gray | `#2a2a2a` | `Divider`   | the `─` rule between the mode row and line 1                                        |
+
+Box corners (`components.Box()`) are unstyled — they render in the terminal's
+default foreground, not a themed color.
 
 `5h` and `7d` are fixed colors (coral / dim gray) rather than keyed off
 remaining rate-limit percentage — there's no severity coloring.
@@ -120,9 +128,12 @@ unrecognized mode string falls back to the `NORMAL` coral.
 
 ## Architecture notes
 
-- `main` holds the input types, git lookup, and `render()`; the presentational
-  helpers (`Bar`, `Row`, `Box`) live in the `components` sub-package and are
-  imported as `github.com/zehuac2/status-line/components`.
+- `main` holds the input types, git lookup, the theme, and `render()`; the
+  presentational helpers (`Bar`, `Row`, `Box`) live in the `components`
+  sub-package and are imported as `github.com/zehuac2/status-line/components`.
+- Colors are a `*theme` argument to `render()` rather than package-level
+  constants, so an alternate palette could be swapped in by constructing a
+  different `*theme` — `main()` currently always builds `claudeTheme()`.
 - `render()` is pure (no side effects) — unit-testable without file I/O.
 - `getGitBranch()` shells out to `git`; it gracefully returns `false` when the
   cwd is not a repo. It only resolves a branch (or short SHA for detached HEAD)
