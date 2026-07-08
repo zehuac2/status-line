@@ -29,15 +29,43 @@ jobs:
             dist/status-line-*.zip \
             dist/SHA256SUMS.txt
 
-      - name: Delete assets from prior releases
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          current_tag="${{ github.event.release.tag_name }}"
-          for tag in $(gh release list --limit 100 --json tagName -q '.[].tagName'); do
-            if [ "$tag" != "$current_tag" ]; then
-              for asset in $(gh release view "$tag" --json assets -q '.assets[].name'); do
-                gh release delete-asset "$tag" "$asset" --yes
-              done
-            fi
-          done
+      - name: Delete assets from older releases
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const currentTag = context.payload.release.tag_name;
+            const { owner, repo } = context.repo;
+
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+
+            const sorted = [...releases].sort(
+              (a, b) => new Date(b.created_at) - new Date(a.created_at),
+            );
+
+            const keepTags = new Set([
+              currentTag,
+              ...sorted.map((r) => r.tag_name).filter((t) => t !== currentTag).slice(0, 2),
+            ]);
+
+            for (const release of releases) {
+              if (keepTags.has(release.tag_name)) continue;
+
+              const assets = await github.paginate(github.rest.repos.listReleaseAssets, {
+                owner,
+                repo,
+                release_id: release.id,
+                per_page: 100,
+              });
+
+              for (const asset of assets) {
+                await github.rest.repos.deleteReleaseAsset({
+                  owner,
+                  repo,
+                  asset_id: asset.id,
+                });
+              }
+            }
