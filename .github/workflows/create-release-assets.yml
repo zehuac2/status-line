@@ -1,4 +1,4 @@
-name: Release
+name: Create Release Assets
 
 on:
   release:
@@ -11,9 +11,9 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
@@ -30,7 +30,7 @@ jobs:
             dist/SHA256SUMS.txt
 
       - name: Delete assets from older releases
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const currentTag = context.payload.release.tag_name;
