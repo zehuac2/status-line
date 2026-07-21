@@ -1,0 +1,75 @@
+name: Publish Homebrew Release
+
+on:
+  workflow_run:
+    workflows: ["Create Release Assets"]
+    types: [completed]
+
+jobs:
+  publish:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve release tag and checksums
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release view --json tagName -q .tagName)
+          gh release download "$tag" --pattern SHA256SUMS.txt --dir /tmp --clobber
+
+          darwin_arm64=$(awk '/status-line-darwin-arm64\.tar\.gz/ { print $1 }' /tmp/SHA256SUMS.txt)
+          linux_arm64=$(awk '/status-line-linux-arm64\.tar\.gz/ { print $1 }' /tmp/SHA256SUMS.txt)
+          linux_x64=$(awk '/status-line-linux-x64\.tar\.gz/ { print $1 }' /tmp/SHA256SUMS.txt)
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "darwin_arm64=$darwin_arm64" >> "$GITHUB_OUTPUT"
+          echo "linux_arm64=$linux_arm64" >> "$GITHUB_OUTPUT"
+          echo "linux_x64=$linux_x64" >> "$GITHUB_OUTPUT"
+
+      - name: Render formula
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+          SHA256_DARWIN_ARM64: ${{ steps.release.outputs.darwin_arm64 }}
+          SHA256_LINUX_ARM64: ${{ steps.release.outputs.linux_arm64 }}
+          SHA256_LINUX_X64: ${{ steps.release.outputs.linux_x64 }}
+        run: |
+          sed \
+            -e "s|{{TAG}}|$TAG|g" \
+            -e "s|{{VERSION}}|$VERSION|g" \
+            -e "s|{{SHA256_DARWIN_ARM64}}|$SHA256_DARWIN_ARM64|g" \
+            -e "s|{{SHA256_LINUX_ARM64}}|$SHA256_LINUX_ARM64|g" \
+            -e "s|{{SHA256_LINUX_X64}}|$SHA256_LINUX_X64|g" \
+            homebrew/status-line.rb.tmpl > /tmp/status-line.rb
+
+      - name: Checkout homebrew-tools
+        uses: actions/checkout@v7
+        with:
+          repository: zehuac2/homebrew-tools
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tools
+
+      - name: Commit and push formula
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          mkdir -p homebrew-tools/Formula
+          cp /tmp/status-line.rb homebrew-tools/Formula/status-line.rb
+
+          cd homebrew-tools
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/status-line.rb
+
+          if git diff --cached --quiet; then
+            echo "No changes to formula; skipping commit."
+            exit 0
+          fi
+
+          git commit -m "status-line ${TAG}"
+          git push
