@@ -18,8 +18,17 @@ jobs:
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
-          tag=$(gh release view --json tagName -q .tagName)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag=$(gh release view --json tagName -q .tagName)
+          else
+            # workflow_run.head_branch is the tag name for release-triggered
+            # runs, so this pins to the exact release that completed rather
+            # than whatever "gh release view" considers latest at the time
+            # this job happens to run.
+            tag="$HEAD_BRANCH"
+          fi
           gh release download "$tag" --pattern SHA256SUMS.txt --dir /tmp --clobber
 
           darwin_arm64=$(awk '/status-line-darwin-arm64\.tar\.gz/ { print $1 }' /tmp/SHA256SUMS.txt)
