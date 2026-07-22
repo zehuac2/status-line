@@ -65,18 +65,19 @@ binary's own mode row.
 
 ## Key files
 
-| File                | Purpose                                                                                                                                           |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `main.go`           | Entrypoint: parses flags, reads stdin or sample JSON, builds the theme, calls `render()`                                                          |
-| `types.go`          | All input types (`StatusInput`, `Model`, etc.) and `sampleInput` const                                                                            |
-| `git.go`            | `getGitBranch()` function                                                                                                                         |
-| `render.go`         | `render()` plus `renderIdentityRow()`, `renderUsageRow()`, `renderActivityRow()`, one per line, assembling segments and calling into `components` |
-| `theme.go`          | `theme`/`vimTheme` structs and `claudeTheme()` constructor centralizing every color                                                               |
-| `components/bar.go` | `components.Bar()` block-gauge helper                                                                                                             |
-| `components/row.go` | `components.Row()` segment-joining helper                                                                                                         |
-| `components/box.go` | `components.Box()` corner-bracket framing helper                                                                                                  |
-| `build.go`          | Cross-compile + package script (`go run build.go`); tagged `//go:build ignore`                                                                    |
-| `go.mod`            | Module `github.com/zehuac2/status-line`, Go 1.26, uses `charm.land/lipgloss/v2`                                                                   |
+| File                           | Purpose                                                                                                                                           |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main.go`                      | Entrypoint: parses flags, reads stdin or sample JSON, builds the theme, calls `render()`                                                          |
+| `types.go`                     | All input types (`StatusInput`, `Model`, etc.) and `sampleInput` const                                                                            |
+| `git.go`                       | `getGitBranch()` function                                                                                                                         |
+| `render.go`                    | `render()` plus `renderIdentityRow()`, `renderUsageRow()`, `renderActivityRow()`, one per line, assembling segments and calling into `components` |
+| `theme.go`                     | `theme`/`vimTheme` structs and `claudeTheme()` constructor centralizing every color                                                               |
+| `components/bar.go`            | `components.Bar()` block-gauge helper                                                                                                             |
+| `components/row.go`            | `components.Row()` segment-joining helper                                                                                                         |
+| `components/box.go`            | `components.Box()` corner-bracket framing helper                                                                                                  |
+| `build.go`                     | Cross-compile + package script (`go run build.go`); tagged `//go:build ignore`                                                                    |
+| `go.mod`                       | Module `github.com/zehuac2/status-line`, Go 1.26, uses `charm.land/lipgloss/v2`                                                                   |
+| `homebrew/status-line.rb.tmpl` | Homebrew formula template, rendered and pushed to the `zehuac2/homebrew-tools` tap on each release                                                |
 
 ## Development
 
@@ -171,5 +172,17 @@ is deliberate so the GitHub release assets are installable via
 [mise's `github:` backend](https://mise.jdx.dev/dev-tools/backends/github.html)
 (`mise use github:zehuac2/status-line`), which autodetects platform from OS/arch
 tokens in the filename and scores archive formats over bare binaries.
-`.github/workflows/release.yml` uploads everything `build.go` emits on
-`release: published`.
+`.github/workflows/create-release-assets.yml` uploads everything `build.go`
+emits on `release: published`.
+
+`.github/workflows/publish-brew-release.yml` runs after
+`create-release-assets.yml` completes successfully (`workflow_run`) and
+publishes a Homebrew formula to the `zehuac2/homebrew-tools` tap
+(`Formula/status-line.rb`). It reads the just-published release's
+`SHA256SUMS.txt`, renders `homebrew/status-line.rb.tmpl` with the version, tag,
+and per-archive checksums, then commits and pushes the rendered formula to the
+tap repo. The formula only covers `darwin-arm64`, `linux-arm64`, and `linux-x64`
+— the archives `build.go` actually produces for those OSes; Homebrew doesn't run
+on Windows, and there's no `darwin-amd64` (Intel Mac) build. Pushing to the tap
+repo requires a `HOMEBREW_TAP_TOKEN` secret (a personal access token with
+`contents: write` on `zehuac2/homebrew-tools`).
