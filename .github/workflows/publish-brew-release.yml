@@ -23,10 +23,10 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             tag=$(gh release view --json tagName -q .tagName)
           else
-            # workflow_run.head_branch is the tag name for release-triggered
-            # runs, so this pins to the exact release that completed rather
-            # than whatever "gh release view" considers latest at the time
-            # this job happens to run.
+            # For a release-triggered run, head_branch holds the tag name.
+            # Use it to target the release that just completed.
+            # Do not use "gh release view". It returns the latest release,
+            # which may not be the release that triggered this run.
             tag="$HEAD_BRANCH"
           fi
           gh release download "$tag" --pattern SHA256SUMS.txt --dir /tmp --clobber
