@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"strings"
 	"time"
@@ -10,8 +11,14 @@ import (
 	"github.com/zehuac2/status-line/components"
 )
 
+// percentage rounds a percentage value to the nearest whole number and
+// returns it as a string with a trailing percent sign.
+func percentage(p float64) string {
+	return fmt.Sprintf("%d%%", int(math.Round(p)))
+}
+
 func render(in StatusInput, t *theme) string {
-	dimGrayNormal := lipgloss.NewStyle().Foreground(t.DimGray)
+	textDimNormal := lipgloss.NewStyle().Foreground(t.TextDim)
 	divider := lipgloss.NewStyle().Foreground(t.Divider)
 
 	identityRow := renderIdentityRow(in, t)
@@ -21,14 +28,17 @@ func render(in StatusInput, t *theme) string {
 	var modeRow, dividerRow string
 	if mode := in.Vim.Mode; mode != "" {
 		modeColor := lipgloss.NewStyle().Bold(true).Foreground(in.Vim.color(&t.Vim))
-		modeRow = components.Row(dimGrayNormal.Render("mode"), modeColor.Render(mode))
+		modeRow = components.Row(textDimNormal.Render("mode"), modeColor.Render(mode))
+	}
 
-		w := lipgloss.Width(modeRow)
-		for _, l := range []string{identityRow, usageRow, activityRow} {
-			if lw := lipgloss.Width(l); lw > w {
-				w = lw
-			}
+	w := lipgloss.Width(modeRow)
+	for _, l := range []string{identityRow, usageRow, activityRow} {
+		if lw := lipgloss.Width(l); lw > w {
+			w = lw
 		}
+	}
+
+	if modeRow != "" {
 		dividerRow = divider.Render(strings.Repeat("─", w))
 	}
 
@@ -36,11 +46,11 @@ func render(in StatusInput, t *theme) string {
 }
 
 // renderIdentityRow renders line 1: cwd basename, git branch, model name, and
-// context-window usage.
+// context-window percentage.
 func renderIdentityRow(in StatusInput, t *theme) string {
 	primary := lipgloss.NewStyle().Bold(true).Foreground(t.Primary)
-	warmGray := lipgloss.NewStyle().Bold(true).Foreground(t.WarmGray)
-	warmGrayNormal := lipgloss.NewStyle().Foreground(t.WarmGray)
+	text := lipgloss.NewStyle().Bold(true).Foreground(t.Text)
+	textNormal := lipgloss.NewStyle().Foreground(t.Text)
 
 	dir := filepath.Base(in.Cwd)
 	if dir == "" || dir == "." {
@@ -50,42 +60,52 @@ func renderIdentityRow(in StatusInput, t *theme) string {
 	var dirSeg, gitSeg, modelSeg, ctxSeg string
 
 	if in.Cwd != "" {
-		dirSeg = warmGrayNormal.Render(dir)
-		if branch, ok := getGitBranch(in.Cwd); ok {
-			gitSeg = warmGray.Render("git:(") + primary.Render(branch) + warmGray.Render(")")
+		dirSeg = textNormal.Render(dir)
+		branch := in.Branch
+		if branch == "" {
+			if b, ok := getGitBranch(in.Cwd); ok {
+				branch = b
+			}
+		}
+		if branch != "" {
+			gitSeg = text.Render("(") + primary.Render(branch) + text.Render(")")
 		}
 	}
 
 	if name := in.Model.DisplayName; name != "" {
-		modelSeg = warmGray.Render("✦ ") + primary.Render(name)
+		modelSeg = text.Render("✦ ") + primary.Render(name)
 	}
 
 	if p := in.ContextWindow.UsedPercentage; p != nil {
-		ctxSeg = warmGrayNormal.Render("ctx ") + components.Bar(*p, 10, warmGrayNormal)
+		ctxSeg = textNormal.Render("ctx " + percentage(*p))
 	}
 
 	return components.Row(dirSeg, gitSeg, modelSeg, ctxSeg)
 }
 
-// renderUsageRow renders line 2: session cost, 5h/7d rate-limit usage, and
-// the next rate-limit reset time.
+// renderUsageRow renders line 2: session cost, model effort, 5h/7d
+// rate-limit usage, and the next rate-limit reset time.
 func renderUsageRow(in StatusInput, t *theme) string {
 	primary := lipgloss.NewStyle().Bold(true).Foreground(t.Primary)
-	warmGray := lipgloss.NewStyle().Bold(true).Foreground(t.WarmGray)
-	dimGray := lipgloss.NewStyle().Bold(true).Foreground(t.DimGray)
+	text := lipgloss.NewStyle().Bold(true).Foreground(t.Text)
+	textDim := lipgloss.NewStyle().Bold(true).Foreground(t.TextDim)
 
-	var costSeg, fiveHrSeg, sevenDSeg, resetSeg string
+	var costSeg, effortSeg, fiveHrSeg, sevenDSeg, resetSeg string
 
 	if in.Cost.TotalCostUSD != nil {
-		costSeg = warmGray.Render(fmt.Sprintf("$%.2f", *in.Cost.TotalCostUSD))
+		costSeg = text.Render(fmt.Sprintf("$%.2f", *in.Cost.TotalCostUSD))
+	}
+
+	if effort := in.Effort.Level; effort != "" {
+		effortSeg = primary.Render(effort)
 	}
 
 	if p := in.RateLimits.FiveHour.UsedPercentage; p != nil {
-		fiveHrSeg = primary.Render("5h ") + components.Bar(*p, 10, primary)
+		fiveHrSeg = primary.Render("5h " + percentage(*p))
 	}
 
 	if p := in.RateLimits.SevenDay.UsedPercentage; p != nil {
-		sevenDSeg = dimGray.Render("7d ") + components.Bar(*p, 10, dimGray)
+		sevenDSeg = textDim.Render("7d " + percentage(*p))
 	}
 
 	resetsAt := in.RateLimits.FiveHour.ResetsAt
@@ -93,29 +113,29 @@ func renderUsageRow(in StatusInput, t *theme) string {
 		resetsAt = in.RateLimits.SevenDay.ResetsAt
 	}
 	if resetsAt != nil {
-		resetSeg = warmGray.Render("↺ ") + primary.Render(time.Unix(*resetsAt, 0).Format("3:04pm"))
+		resetSeg = text.Render("↺ ") + primary.Render(time.Unix(*resetsAt, 0).Format("3:04pm"))
 	}
 
-	return components.Row(costSeg, fiveHrSeg, sevenDSeg, resetSeg)
+	return components.Row(costSeg, effortSeg, fiveHrSeg, sevenDSeg, resetSeg)
 }
 
 // renderActivityRow renders line 3: lines added/removed and session
 // duration.
 func renderActivityRow(in StatusInput, t *theme) string {
-	warmGray := lipgloss.NewStyle().Bold(true).Foreground(t.WarmGray)
-	dimGray := lipgloss.NewStyle().Bold(true).Foreground(t.DimGray)
+	text := lipgloss.NewStyle().Bold(true).Foreground(t.Text)
+	textDim := lipgloss.NewStyle().Bold(true).Foreground(t.TextDim)
 
 	var diffSeg, sessionSeg string
 
 	if in.Cost.TotalLinesAdded != nil && in.Cost.TotalLinesRemoved != nil {
-		diffSeg = warmGray.Render(fmt.Sprintf("▲%d ▼%d", *in.Cost.TotalLinesAdded, *in.Cost.TotalLinesRemoved))
+		diffSeg = text.Render(fmt.Sprintf("▲%d ▼%d", *in.Cost.TotalLinesAdded, *in.Cost.TotalLinesRemoved))
 	}
 
 	if in.Cost.TotalDurationMs != nil {
 		d := time.Duration(*in.Cost.TotalDurationMs) * time.Millisecond
 		h := int(d.Hours())
 		m := int(d.Minutes()) % 60
-		sessionSeg = dimGray.Render(fmt.Sprintf("⧗ %dh%02dm", h, m))
+		sessionSeg = textDim.Render(fmt.Sprintf("⧗ %dh%02dm", h, m))
 	}
 
 	return components.Row(diffSeg, sessionSeg)

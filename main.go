@@ -10,6 +10,12 @@ import (
 )
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(r)
+		}
+	}()
+
 	claude := flag.Bool("claude", false, "render the status line from built-in sample JSON instead of stdin")
 	flag.Parse()
 
