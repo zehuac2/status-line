@@ -58,7 +58,7 @@ func renderIdentityRow(in StatusInput, t *theme) string {
 			}
 		}
 		if branch != "" {
-			gitSeg = warmGray.Render("git:(") + primary.Render(branch) + warmGray.Render(")")
+			gitSeg = warmGray.Render("(") + primary.Render(branch) + warmGray.Render(")")
 		}
 	}
 
