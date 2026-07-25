@@ -29,29 +29,13 @@ collapse, the box itself is omitted too — no empty frame is printed.
 
 ## Input schema
 
-```json
-{
-  "model": { "display_name": "Sonnet", "effort": "high" },
-  "cwd": "/absolute/path",
-  "branch": "main",
-  "context_window": {
-    "used_percentage": 42.5,
-    "total_input_tokens": 15000,
-    "total_output_tokens": 3200
-  },
-  "cost": {
-    "total_cost_usd": 0.0123,
-    "total_duration_ms": 7980000,
-    "total_lines_added": 247,
-    "total_lines_removed": 83
-  },
-  "rate_limits": {
-    "five_hour": { "used_percentage": 30, "resets_at": 1751572500 },
-    "seven_day": { "used_percentage": 15, "resets_at": 1752091200 }
-  },
-  "vim": { "mode": "NORMAL" }
-}
-```
+The full JSON schema is published by Anthropic and drifts over time, so it is
+**not** duplicated here. Before changing how the payload is parsed or rendered,
+fetch the authoritative schema from
+<https://code.claude.com/docs/en/statusline#full-json-schema> (use the WebFetch
+tool) and reconcile `types.go` against it. The notes below describe how this
+binary interprets the payload today and are not a substitute for the live
+schema.
 
 All numeric fields are pointers (`*float64` / `*int64`) and are omitted from
 output when absent. `branch` overrides the git branch lookup; if omitted, the

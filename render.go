@@ -96,7 +96,7 @@ func renderUsageRow(in StatusInput, t *theme) string {
 		costSeg = text.Render(fmt.Sprintf("$%.2f", *in.Cost.TotalCostUSD))
 	}
 
-	if effort := in.Model.Effort; effort != "" {
+	if effort := in.Effort.Level; effort != "" {
 		effortSeg = primary.Render(effort)
 	}
 

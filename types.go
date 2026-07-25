@@ -8,13 +8,20 @@ type StatusInput struct {
 	Branch        string        `json:"branch"`
 	ContextWindow ContextWindow `json:"context_window"`
 	Cost          Cost          `json:"cost"`
+	Effort        Effort        `json:"effort"`
 	RateLimits    RateLimits    `json:"rate_limits"`
 	Vim           Vim           `json:"vim"`
 }
 
 type Model struct {
+	ID          string `json:"id"`
 	DisplayName string `json:"display_name"`
-	Effort      string `json:"effort"`
+}
+
+// Effort is absent when the current model does not support the reasoning
+// effort parameter.
+type Effort struct {
+	Level string `json:"level"`
 }
 
 // Vim is absent from the input entirely when vim mode is disabled.
@@ -64,8 +71,8 @@ type RateLimit struct {
 
 const sampleInput = `{
 	"model": {
-		"display_name": "Opus",
-		"effort": "high"
+		"id": "claude-opus-5",
+		"display_name": "Opus"
 	},
 	"cwd": "/Users/zehuachen/Developer/others/status-line",
 	"branch": "main",
@@ -79,6 +86,9 @@ const sampleInput = `{
 		"total_duration_ms": 7980000,
 		"total_lines_added": 247,
 		"total_lines_removed": 83
+	},
+	"effort": {
+		"level": "high"
 	},
 	"rate_limits": {
 		"five_hour": {
