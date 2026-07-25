@@ -14,16 +14,14 @@ four rounded corners (`╭ ╮ ╰ ╯`), no connecting edges.
 
 **Mode row (optional):** `mode <VimMode>` — only rendered when vim mode is
 enabled, followed by a `─` divider rule before the identity row. **Identity row
-(line 1):** `<cwd-basename> git:(<branch>) ✦ <ModelName> · <effort> ctx <bar>`
-**Usage row (line 2):** `$<cost> 5h <bar> 7d <bar> ↺ <rate-limit-reset-time>`
+(line 1):** `<cwd-basename> git:(<branch>) ✦ <ModelName> ctx <percentage>`
+**Usage row (line 2):**
+`$<cost> <effort> 5h <percentage> 7d <percentage> ↺ <rate-limit-reset-time>`
 **Activity row (line 3):**
 `▲<lines-added> ▼<lines-removed> ⧗ <session-duration>`
 
-`<bar>` is a 10-character block gauge (`components.Bar()`) built from a
-percentage — full `█` blocks, one faint `█` remainder cell (rounded to the
-nearest eighth of a cell), `░` padding. The remainder cell is a dimmed solid
-block rather than a fractional glyph (▏▎▍▌▋▊▉), since those render
-inconsistently across monospace fonts.
+`<percentage>` is the whole-number percentage (rounded to the nearest integer)
+for the relevant field — for example, `ctx 8%`, `5h 93%`, or `7d 96%`.
 
 Any segment whose backing field is absent is omitted, and a whole line collapses
 (not printed as blank) if every one of its segments is absent. If all lines
@@ -58,8 +56,8 @@ collapse, the box itself is omitted too — no empty frame is printed.
 All numeric fields are pointers (`*float64` / `*int64`) and are omitted from
 output when absent. `branch` overrides the git branch lookup; if omitted, the
 branch is resolved by shelling out to `git` from `cwd`. `effort` is optional and
-renders next to the model name when present. `resets_at` is Unix epoch seconds;
-the reset-time segment prefers `five_hour.resets_at`, falling back to
+renders on the usage row when present. `resets_at` is Unix epoch seconds; the
+reset-time segment prefers `five_hour.resets_at`, falling back to
 `seven_day.resets_at`.
 
 `vim` is absent from the payload entirely when vim mode is disabled — not just
@@ -111,15 +109,15 @@ Colors are centralized in the `theme` struct (`theme.go`), constructed by
 literals scattered through `render.go`.
 
 Most segments render bold, matching the design's block-wide `font-weight:700`;
-the cwd basename and `ctx <bar>` segment are normal weight (the design overrides
-those to `400`).
+the cwd basename and `ctx <percentage>` segment are normal weight (the design
+overrides those to `400`).
 
-| Color        | Hex       | Theme field | Used for                                                                            |
-| ------------ | --------- | ----------- | ----------------------------------------------------------------------------------- |
-| warm gray    | `#8f8a80` | `WarmGray`  | cwd basename, `git:(…)` brackets, `✦`, `ctx <bar>`, `▲added ▼removed`, `$cost`, `↺` |
-| dim gray     | `#6f6b62` | `DimGray`   | session duration, whole `7d <bar>` segment, `mode` label (normal weight)            |
-| Claude coral | `#d97757` | `Primary`   | branch name, model name, whole `5h <bar>` segment, reset time, `NORMAL` vim mode    |
-| divider gray | `#2a2a2a` | `Divider`   | the `─` rule between the mode row and the identity row                              |
+| Color        | Hex       | Theme field | Used for                                                                                          |
+| ------------ | --------- | ----------- | ------------------------------------------------------------------------------------------------- |
+| warm gray    | `#8f8a80` | `WarmGray`  | cwd basename, `git:(…)` brackets, `✦`, `ctx <percentage>`, `▲added ▼removed`, `$cost`, `↺`        |
+| dim gray     | `#6f6b62` | `DimGray`   | session duration, whole `7d <percentage>` segment, `mode` label (normal weight)                   |
+| Claude coral | `#d97757` | `Primary`   | branch name, model name, `effort`, whole `5h <percentage>` segment, reset time, `NORMAL` vim mode |
+| divider gray | `#2a2a2a` | `Divider`   | the `─` rule between the mode row and the identity row                                            |
 
 Box corners (`components.Box()`) are unstyled — they render in the terminal's
 default foreground, not a themed color.
@@ -161,7 +159,7 @@ unrecognized mode string falls back to the `NORMAL` coral.
   the divider next to one) never prints a blank row.
 - The divider's width is `lipgloss.Width(row)` maxed over the mode row and the
   identity/usage/activity rows — not `len()`, since the rows carry ANSI styling
-  and wide/multibyte glyphs (`█ ░ ▲ ✦ ↺`) whose byte length doesn't match their
+  and wide/multibyte glyphs (`▲ ✦ ↺`) whose byte length doesn't match their
   terminal cell width. `lipgloss.Width` strips ANSI and measures true cell
   width, so the rule spans exactly the box's widest content row regardless of
   which segments are present.

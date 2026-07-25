@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"strings"
 	"time"
@@ -9,6 +10,12 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/zehuac2/status-line/components"
 )
+
+// percentage rounds a percentage value to the nearest whole number and
+// returns it as a string with a trailing percent sign.
+func percentage(p float64) string {
+	return fmt.Sprintf("%d%%", int(math.Round(p)))
+}
 
 func render(in StatusInput, t *theme) string {
 	dimGrayNormal := lipgloss.NewStyle().Foreground(t.DimGray)
@@ -36,7 +43,7 @@ func render(in StatusInput, t *theme) string {
 }
 
 // renderIdentityRow renders line 1: cwd basename, git branch, model name, and
-// context-window usage.
+// context-window percentage.
 func renderIdentityRow(in StatusInput, t *theme) string {
 	primary := lipgloss.NewStyle().Bold(true).Foreground(t.Primary)
 	warmGray := lipgloss.NewStyle().Bold(true).Foreground(t.WarmGray)
@@ -64,37 +71,38 @@ func renderIdentityRow(in StatusInput, t *theme) string {
 
 	if name := in.Model.DisplayName; name != "" {
 		modelSeg = warmGray.Render("✦ ") + primary.Render(name)
-		if effort := in.Model.Effort; effort != "" {
-			modelSeg += warmGray.Render(" · ") + primary.Render(effort)
-		}
 	}
 
 	if p := in.ContextWindow.UsedPercentage; p != nil {
-		ctxSeg = warmGrayNormal.Render("ctx ") + components.Bar(*p, 10, warmGrayNormal)
+		ctxSeg = warmGrayNormal.Render("ctx " + percentage(*p))
 	}
 
 	return components.Row(dirSeg, gitSeg, modelSeg, ctxSeg)
 }
 
-// renderUsageRow renders line 2: session cost, 5h/7d rate-limit usage, and
-// the next rate-limit reset time.
+// renderUsageRow renders line 2: session cost, model effort, 5h/7d
+// rate-limit usage, and the next rate-limit reset time.
 func renderUsageRow(in StatusInput, t *theme) string {
 	primary := lipgloss.NewStyle().Bold(true).Foreground(t.Primary)
 	warmGray := lipgloss.NewStyle().Bold(true).Foreground(t.WarmGray)
 	dimGray := lipgloss.NewStyle().Bold(true).Foreground(t.DimGray)
 
-	var costSeg, fiveHrSeg, sevenDSeg, resetSeg string
+	var costSeg, effortSeg, fiveHrSeg, sevenDSeg, resetSeg string
 
 	if in.Cost.TotalCostUSD != nil {
 		costSeg = warmGray.Render(fmt.Sprintf("$%.2f", *in.Cost.TotalCostUSD))
 	}
 
+	if effort := in.Model.Effort; effort != "" {
+		effortSeg = primary.Render(effort)
+	}
+
 	if p := in.RateLimits.FiveHour.UsedPercentage; p != nil {
-		fiveHrSeg = primary.Render("5h ") + components.Bar(*p, 10, primary)
+		fiveHrSeg = primary.Render("5h " + percentage(*p))
 	}
 
 	if p := in.RateLimits.SevenDay.UsedPercentage; p != nil {
-		sevenDSeg = dimGray.Render("7d ") + components.Bar(*p, 10, dimGray)
+		sevenDSeg = dimGray.Render("7d " + percentage(*p))
 	}
 
 	resetsAt := in.RateLimits.FiveHour.ResetsAt
@@ -105,7 +113,7 @@ func renderUsageRow(in StatusInput, t *theme) string {
 		resetSeg = warmGray.Render("↺ ") + primary.Render(time.Unix(*resetsAt, 0).Format("3:04pm"))
 	}
 
-	return components.Row(costSeg, fiveHrSeg, sevenDSeg, resetSeg)
+	return components.Row(costSeg, effortSeg, fiveHrSeg, sevenDSeg, resetSeg)
 }
 
 // renderActivityRow renders line 3: lines added/removed and session
