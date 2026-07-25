@@ -14,9 +14,10 @@ four rounded corners (`╭ ╮ ╰ ╯`), no connecting edges.
 
 **Mode row (optional):** `mode <VimMode>` — only rendered when vim mode is
 enabled, followed by a `─` divider rule before the identity row. **Identity row
-(line 1):** `<cwd-basename> git:(<branch>) ✦ <ModelName> ctx <bar>` **Usage row
-(line 2):** `$<cost> 5h <bar> 7d <bar> ↺ <rate-limit-reset-time>` **Activity row
-(line 3):** `▲<lines-added> ▼<lines-removed> ⧗ <session-duration>`
+(line 1):** `<cwd-basename> git:(<branch>) ✦ <ModelName> · <effort> ctx <bar>`
+**Usage row (line 2):** `$<cost> 5h <bar> 7d <bar> ↺ <rate-limit-reset-time>`
+**Activity row (line 3):**
+`▲<lines-added> ▼<lines-removed> ⧗ <session-duration>`
 
 `<bar>` is a 10-character block gauge (`components.Bar()`) built from a
 percentage — full `█` blocks, one faint `█` remainder cell (rounded to the
@@ -32,8 +33,9 @@ collapse, the box itself is omitted too — no empty frame is printed.
 
 ```json
 {
-  "model": { "display_name": "Sonnet" },
+  "model": { "display_name": "Sonnet", "effort": "high" },
   "cwd": "/absolute/path",
+  "branch": "main",
   "context_window": {
     "used_percentage": 42.5,
     "total_input_tokens": 15000,
@@ -54,8 +56,11 @@ collapse, the box itself is omitted too — no empty frame is printed.
 ```
 
 All numeric fields are pointers (`*float64` / `*int64`) and are omitted from
-output when absent. `resets_at` is Unix epoch seconds; the reset-time segment
-prefers `five_hour.resets_at`, falling back to `seven_day.resets_at`.
+output when absent. `branch` overrides the git branch lookup; if omitted, the
+branch is resolved by shelling out to `git` from `cwd`. `effort` is optional and
+renders next to the model name when present. `resets_at` is Unix epoch seconds;
+the reset-time segment prefers `five_hour.resets_at`, falling back to
+`seven_day.resets_at`.
 
 `vim` is absent from the payload entirely when vim mode is disabled — not just
 `vim.mode` being empty. `vim.mode` is one of `NORMAL`, `INSERT`, `VISUAL`, or

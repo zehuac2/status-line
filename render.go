@@ -51,13 +51,22 @@ func renderIdentityRow(in StatusInput, t *theme) string {
 
 	if in.Cwd != "" {
 		dirSeg = warmGrayNormal.Render(dir)
-		if branch, ok := getGitBranch(in.Cwd); ok {
+		branch := in.Branch
+		if branch == "" {
+			if b, ok := getGitBranch(in.Cwd); ok {
+				branch = b
+			}
+		}
+		if branch != "" {
 			gitSeg = warmGray.Render("git:(") + primary.Render(branch) + warmGray.Render(")")
 		}
 	}
 
 	if name := in.Model.DisplayName; name != "" {
 		modelSeg = warmGray.Render("✦ ") + primary.Render(name)
+		if effort := in.Model.Effort; effort != "" {
+			modelSeg += warmGray.Render(" · ") + primary.Render(effort)
+		}
 	}
 
 	if p := in.ContextWindow.UsedPercentage; p != nil {
