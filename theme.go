@@ -9,10 +9,10 @@ import (
 // theme centralizes every color used by render() so the palette lives in one
 // place and can be swapped by constructing a different *theme.
 type theme struct {
-	WarmGray color.Color // cwd basename, git brackets, ✦, ctx bar, ▲▼, $cost, ↺
-	DimGray  color.Color // session duration, 7d bar, mode label
-	Primary  color.Color // branch, model, 5h bar, reset time
-	Divider  color.Color // ─ rule under the mode row
+	Text    color.Color // cwd basename, git brackets, ✦, ctx bar, ▲▼, $cost, ↺
+	TextDim color.Color // session duration, 7d bar, mode label
+	Primary color.Color // branch, model, 5h bar, reset time
+	Divider color.Color // ─ rule between the mode row and the identity row
 
 	Vim vimTheme // per-mode vim accents
 }
@@ -28,10 +28,10 @@ type vimTheme struct {
 
 func claudeTheme() *theme {
 	return &theme{
-		WarmGray: lipgloss.Color("#8f8a80"),
-		DimGray:  lipgloss.Color("#6f6b62"),
-		Primary:  lipgloss.Color("#d97757"),
-		Divider:  lipgloss.Color("#2a2a2a"),
+		Text:    lipgloss.Color("#8f8a80"),
+		TextDim: lipgloss.Color("#6f6b62"),
+		Primary: lipgloss.Color("#d97757"),
+		Divider: lipgloss.Color("#6f6b62"),
 		Vim: vimTheme{
 			Normal:     lipgloss.Color("#d97757"),
 			Insert:     lipgloss.Color("#69c27e"),

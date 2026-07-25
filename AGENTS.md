@@ -14,7 +14,7 @@ four rounded corners (`╭ ╮ ╰ ╯`), no connecting edges.
 
 **Mode row (optional):** `mode <VimMode>` — only rendered when vim mode is
 enabled, followed by a `─` divider rule before the identity row. **Identity row
-(line 1):** `<cwd-basename> git:(<branch>) ✦ <ModelName> ctx <percentage>`
+(line 1):** `<cwd-basename> git:(<branch>) ✦ <ModelName> ctx <percentage>`.
 **Usage row (line 2):**
 `$<cost> <effort> 5h <percentage> 7d <percentage> ↺ <rate-limit-reset-time>`
 **Activity row (line 3):**
@@ -112,12 +112,12 @@ Most segments render bold, matching the design's block-wide `font-weight:700`;
 the cwd basename and `ctx <percentage>` segment are normal weight (the design
 overrides those to `400`).
 
-| Color        | Hex       | Theme field | Used for                                                                                          |
-| ------------ | --------- | ----------- | ------------------------------------------------------------------------------------------------- |
-| warm gray    | `#8f8a80` | `WarmGray`  | cwd basename, `git:(…)` brackets, `✦`, `ctx <percentage>`, `▲added ▼removed`, `$cost`, `↺`        |
-| dim gray     | `#6f6b62` | `DimGray`   | session duration, whole `7d <percentage>` segment, `mode` label (normal weight)                   |
-| Claude coral | `#d97757` | `Primary`   | branch name, model name, `effort`, whole `5h <percentage>` segment, reset time, `NORMAL` vim mode |
-| divider gray | `#2a2a2a` | `Divider`   | the `─` rule between the mode row and the identity row                                            |
+| Color        | Theme field | Used for                                                                                          |
+| ------------ | ----------- | ------------------------------------------------------------------------------------------------- |
+| text         | `Text`      | cwd basename, `git:(…)` brackets, `✦`, `ctx <percentage>`, `▲added ▼removed`, `$cost`, `↺`        |
+| text dim     | `TextDim`   | session duration, whole `7d <percentage>` segment, `mode` label (normal weight)                   |
+| Claude coral | `Primary`   | branch name, model name, `effort`, whole `5h <percentage>` segment, reset time, `NORMAL` vim mode |
+| divider      | `Divider`   | the `─` rule between the mode row and the identity row (same hue as `TextDim`)                    |
 
 Box corners (`components.Box()`) are unstyled — they render in the terminal's
 default foreground, not a themed color.
@@ -125,10 +125,11 @@ default foreground, not a themed color.
 `5h` and `7d` are fixed colors (coral / dim gray) rather than keyed off
 remaining rate-limit percentage — there's no severity coloring.
 
-The vim mode value itself is colored per-mode (bold): `NORMAL` `#d97757`,
-`INSERT` `#69c27e`, `VISUAL` / `VISUAL LINE` `#9792ec`, `REPLACE` `#e36b65`
-(kept for design fidelity even though Claude Code doesn't currently emit it). An
-unrecognized mode string falls back to the `NORMAL` coral.
+The vim mode value itself is colored per-mode (bold): `NORMAL`, `INSERT`,
+`VISUAL` / `VISUAL LINE`, and `REPLACE` (kept for design fidelity even though
+Claude Code doesn't currently emit it). The per-mode accent for each is in
+`vimTheme` in `theme.go`. An unrecognized mode string falls back to the `NORMAL`
+coral.
 
 ## Architecture notes
 
